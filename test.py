@@ -149,7 +149,7 @@ scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
 ]
-creds = Credentials.from_service_account_file("credentials.json.env", scopes=scope)
+creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
 client = gspread.authorize(creds)
 sheet = client.open("Prices").sheet1
 sheet.clear()
