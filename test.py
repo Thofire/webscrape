@@ -10,6 +10,8 @@ import random
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from dotenv import load_dotenv
+import os
 # -------------------------------
 # Scrape Product Data (Multi-Site)
 # -------------------------------
@@ -156,9 +158,17 @@ sheet.clear()
 sheet.append_row(['Site', 'URL', 'Item', 'Price'])
 
 # -------------------------------
+# MongoDB Setup 
+# -------------------------------
+client = MongoClient(os.getenv("MONGODB_URI"))
+db = client["price_tracker"]
+collection = db["prices"]
+
+
+# -------------------------------
 # Input URLs
 # -------------------------------
-URLS_FILE = r"C:\Users\Thofire\Desktop\webscrape\urls.txt"
+URLS_FILE = os.getenv("URLS_FILE_PATH", "urls.txt")  # Default to urls.txt if not set
 
 with open(URLS_FILE, "r") as f:
     websites = [line.strip() for line in f if line.strip() and not line.startswith("#")]
@@ -172,7 +182,7 @@ for url in websites:
 print("\n⚠️  Make sure Firefox is fully closed before continuing!")
 input("Press ENTER when Firefox is closed...")
 
-FIREFOX_PROFILE = r"C:\Users\Thofire\Desktop\webscrape\firefox_profile"
+FIREFOX_PROFILE = os.getenv("FIREFOX_PROFILE_PATH") 
 
 # -------------------------------
 # Selenium Firefox Setup
@@ -212,4 +222,18 @@ finally:
 for row in all_data:
     sheet.append_row(list(row))
 
+
 print("\n✅ Done! Data uploaded to Google Sheets.")
+
+# -------------------------------
+# Upload to MongoDB
+# -------------------------------
+for site,url,name,price in all_data:
+    collection.insert_one({
+        "site": site,
+        "url": url,
+        "name": name,
+        "price": price,
+        "timestamp": time.time()
+    })
+    print("✅ Done! Data saved to MongoDB.")
