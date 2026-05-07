@@ -1,17 +1,9 @@
 import re
-import gspread
-from google.oauth2.service_account import Credentials
-from selenium import webdriver
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.options import Options
-from webdriver_manager.firefox import GeckoDriverManager
 import time
-import random
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from dotenv import load_dotenv
-import os
+
 # -------------------------------
 # Scrape Product Data (Multi-Site)
 # -------------------------------
@@ -143,97 +135,3 @@ def get_site_label(url):
         return "Amazon"
     else:
         return "Other"
-
-# -------------------------------
-# Google Sheets Setup
-# -------------------------------
-scope = [
-    "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
-]
-creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
-client = gspread.authorize(creds)
-sheet = client.open("Prices").sheet1
-sheet.clear()
-sheet.append_row(['Site', 'URL', 'Item', 'Price'])
-
-# -------------------------------
-# MongoDB Setup 
-# -------------------------------
-client = MongoClient(os.getenv("MONGODB_URI"))
-db = client["price_tracker"]
-collection = db["prices"]
-
-
-# -------------------------------
-# Input URLs
-# -------------------------------
-URLS_FILE = os.getenv("URLS_FILE_PATH", "urls.txt")  # Default to urls.txt if not set
-
-with open(URLS_FILE, "r") as f:
-    websites = [line.strip() for line in f if line.strip() and not line.startswith("#")]
-
-print(f"✅ Loaded {len(websites)} URLs from {URLS_FILE}")
-for url in websites:
-    print(f"   - {url}")
-# -------------------------------
-# Setup Profile
-# -------------------------------
-print("\n⚠️  Make sure Firefox is fully closed before continuing!")
-input("Press ENTER when Firefox is closed...")
-
-FIREFOX_PROFILE = os.getenv("FIREFOX_PROFILE_PATH") 
-
-# -------------------------------
-# Selenium Firefox Setup
-# -------------------------------
-options = Options()
-options.add_argument("--start-maximized")
-options.add_argument("-profile")
-options.add_argument(FIREFOX_PROFILE)
-options.set_preference("dom.webdriver.enabled", False)
-options.set_preference("useAutomationExtension", False)
-options.set_preference(
-    "general.useragent.override",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0"
-)
-
-service = Service(GeckoDriverManager().install())
-driver = webdriver.Firefox(service=service, options=options)
-driver.minimize_window()
-
-try:
-    # Step 1: Visit homepages to establish sessions
-    all_data = []
-    # Step 3: Scrape
-    for url in websites:
-        print(f"\nProcessing: {url}")
-        site = get_site_label(url)
-        name, price = get_product_data(driver, url)
-        all_data.append((site, url, name, price))
-        time.sleep(random.uniform(1, 2))
-
-finally:
-    driver.quit()
-
-# -------------------------------
-# Upload to Google Sheets
-# -------------------------------
-for row in all_data:
-    sheet.append_row(list(row))
-
-
-print("\n✅ Done! Data uploaded to Google Sheets.")
-
-# -------------------------------
-# Upload to MongoDB
-# -------------------------------
-for site,url,name,price in all_data:
-    collection.insert_one({
-        "site": site,
-        "url": url,
-        "name": name,
-        "price": price,
-        "timestamp": time.time()
-    })
-    print("✅ Done! Data saved to MongoDB.")
