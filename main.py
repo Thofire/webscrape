@@ -12,7 +12,7 @@ from db.sheets import get_sheet, upload_to_sheets
 from db.mongodb import get_collection, upload_to_mongo
 
 load_dotenv()
-
+MONGODB_URI = os.getenv("MONGODB_URI")
 URLS_FILE = os.getenv("URLS_FILE_PATH", "urls.txt")  # Default to urls.txt if not set
 FIREFOX_PROFILE = os.getenv("FIREFOX_PROFILE_PATH")
 

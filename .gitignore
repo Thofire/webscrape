@@ -1,2 +1,4 @@
 firefox_profile
 credentials.json
+.env
+/db
